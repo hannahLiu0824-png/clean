@@ -1,0 +1,457 @@
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, AlertTriangle, Trophy, ClipboardList, Clock, Bell, User, Camera, Calendar, Check, Gift, Users } from 'lucide-react';
+
+// --- 37人完整職務資料 ---
+const ALL_STUDENTS = [
+  // 幹部區 (6人)
+  { id: 1, name: '1號', role: '班長', category: '幹部', status: 'exempt' },
+  { id: 2, name: '2號', role: '副班長', category: '幹部', status: 'exempt' },
+  { id: 3, name: '3號', role: '衛生股長', category: '幹部', status: 'exempt' },
+  { id: 4, name: '4號', role: '衛生股長', category: '幹部', status: 'exempt' },
+  { id: 5, name: '5號', role: '環保股長', category: '幹部', status: 'exempt' },
+  { id: 6, name: '6號', role: '環保股長', category: '幹部', status: 'exempt' },
+  
+  // 教室內掃 (24人)
+  { id: 7, name: '7號', role: '黑板 (早)', category: '教室內掃', status: 'none' },
+  { id: 8, name: '8號', role: '黑板 (早)', category: '教室內掃', status: 'none' },
+  { id: 9, name: '9號', role: '黑板 (中)', category: '教室內掃', status: 'none' },
+  { id: 10, name: '10號', role: '黑板 (中)', category: '教室內掃', status: 'none' },
+  { id: 11, name: '11號', role: '黑板 (午)', category: '教室內掃', status: 'pending' },
+  { id: 12, name: '12號', role: '黑板 (午)', category: '教室內掃', status: 'approved' },
+  { id: 13, name: '13號', role: '走廊掃拖', category: '教室內掃', status: 'none' },
+  { id: 14, name: '14號', role: '走廊掃拖', category: '教室內掃', status: 'none' },
+  { id: 15, name: '15號', role: '掃地', category: '教室內掃', status: 'none' },
+  { id: 16, name: '16號', role: '掃地', category: '教室內掃', status: 'none' },
+  { id: 17, name: '17號', role: '掃地', category: '教室內掃', status: 'none' },
+  { id: 18, name: '18號', role: '掃地', category: '教室內掃', status: 'none' },
+  { id: 19, name: '19號', role: '拖地', category: '教室內掃', status: 'none' },
+  { id: 20, name: '20號', role: '拖地', category: '教室內掃', status: 'none' },
+  { id: 21, name: '21號', role: '拖地', category: '教室內掃', status: 'none' },
+  { id: 22, name: '22號', role: '拖地', category: '教室內掃', status: 'none' },
+  { id: 23, name: '23號', role: '倒垃圾', category: '教室內掃', status: 'none' },
+  { id: 24, name: '24號', role: '倒垃圾', category: '教室內掃', status: 'none' },
+  { id: 25, name: '25號', role: '回收協助', category: '教室內掃', status: 'none' },
+  { id: 26, name: '26號', role: '回收協助', category: '教室內掃', status: 'none' },
+  { id: 27, name: '27號', role: '窗戶', category: '教室內掃', status: 'none' },
+  { id: 28, name: '28號', role: '窗戶', category: '教室內掃', status: 'none' },
+  { id: 29, name: '29號', role: '講台', category: '教室內掃', status: 'none' },
+  { id: 30, name: '30號', role: '置物櫃', category: '教室內掃', status: 'none' },
+  
+  // 外掃區 (7人)
+  { id: 31, name: '31號', role: '外掃隊員 1', category: '外掃區', status: 'none' },
+  { id: 32, name: '32號', role: '外掃隊員 2', category: '外掃區', status: 'pending' },
+  { id: 33, name: '33號', role: '外掃隊員 3', category: '外掃區', status: 'none' },
+  { id: 34, name: '34號', role: '外掃隊員 4', category: '外掃區', status: 'none' },
+  { id: 35, name: '35號', role: '外掃隊員 5', category: '外掃區', status: 'none' },
+  { id: 36, name: '36號', role: '外掃隊員 6', category: '外掃區', status: 'none' },
+  { id: 37, name: '37號', role: '外掃隊員 7', category: '外掃區', status: 'none' },
+];
+
+const INITIAL_VIOLATIONS = [
+  { 
+    id: 1, name: '15號', count: 3, 
+    details: [
+      { date: '11/16', time: '16:00', area: '掃地' },
+      { date: '11/17', time: '16:00', area: '掃地' },
+      { date: '11/18', time: '16:00', area: '掃地' }
+    ] 
+  },
+  { 
+    id: 2, name: '23號', count: 1, 
+    details: [
+      { date: '11/18', time: '16:00', area: '倒垃圾' }
+    ] 
+  }
+];
+
+// --- 共用對話框元件 ---
+const Modal = ({ isOpen, onClose, title, content }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-opacity">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
+        <div className="bg-blue-600 p-4">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Bell size={24} /> {title}
+          </h3>
+        </div>
+        <div className="p-6">
+          <p className="text-gray-700 text-lg mb-6 leading-relaxed">{content}</p>
+          <div className="flex justify-end">
+            <button 
+              onClick={onClose} 
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors"
+            >
+              確定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('student');
+  const [students, setStudents] = useState(ALL_STUDENTS);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', content: '' });
+  
+  // 抽獎相關狀態
+  const [winners, setWinners] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  const openModal = (title, content) => setModalConfig({ isOpen: true, title, content });
+  const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
+
+  // --- 打卡功能 (學生) ---
+  const handleCheckIn = (id) => {
+    setStudents(prev => prev.map(s => 
+      s.id === id ? { ...s, status: 'pending' } : s
+    ));
+    openModal('打卡成功', '已送出打卡紀錄！請等待衛生股長檢核。若需補照片，請依規定時間上傳。');
+  };
+
+  // --- 檢核功能 (衛生股長) ---
+  const handleReview = (id, status) => {
+    setStudents(prev => prev.map(s => 
+      s.id === id ? { ...s, status } : s
+    ));
+  };
+
+  // --- 抽獎功能 ---
+  const handleDrawLottery = () => {
+    if (winners.length > 0) setWinners([]);
+    setIsDrawing(true);
+    
+    // 從「已檢核通過」或預設名單中抽籤
+    setTimeout(() => {
+      let eligible = students.filter(s => s.status === 'approved').map(s => s.name);
+      // 如果測試時沒有足夠的通過者，使用備用假名單
+      if (eligible.length < 3) {
+        eligible = ['12號', '8號', '20號', '22號', '31號', '17號', '9號'];
+      }
+      const shuffled = [...eligible].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 3).map(name => ({ name, reward: '' }));
+      setWinners(selected);
+      setIsDrawing(false);
+    }, 1000);
+  };
+
+  const handleRewardSelect = (index, reward) => {
+    const newWinners = [...winners];
+    newWinners[index].reward = reward;
+    setWinners(newWinners);
+  };
+
+  // 分組渲染輔助函數
+  const renderStudentGrid = (categoryName) => {
+    const group = students.filter(s => s.category === categoryName);
+    return (
+      <div className="mb-8">
+        <h3 className="text-lg font-bold text-slate-700 border-l-4 border-blue-500 pl-3 mb-4">{categoryName} ({group.length}人)</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {group.map(s => (
+            <div key={s.id} className={`p-3 rounded-xl border flex flex-col justify-between h-28 shadow-sm transition-all ${
+              s.status === 'exempt' ? 'bg-slate-100 border-slate-200 opacity-70' :
+              s.status === 'approved' ? 'bg-green-50 border-green-200' :
+              s.status === 'pending' ? 'bg-amber-50 border-amber-200' :
+              s.status === 'rejected' ? 'bg-red-50 border-red-200' :
+              'bg-white border-slate-200 hover:border-blue-300 hover:shadow-md'
+            }`}>
+              <div>
+                <div className="font-bold text-slate-800 text-sm">{s.name}</div>
+                <div className="text-xs text-slate-500 mt-1 font-medium">{s.role}</div>
+              </div>
+              
+              <div className="mt-2">
+                {s.status === 'exempt' && <span className="text-xs text-slate-400 font-bold">免掃幹部</span>}
+                {s.status === 'approved' && <span className="text-xs text-green-600 font-bold flex items-center gap-1"><Check size={14}/>已通過</span>}
+                {s.status === 'pending' && <span className="text-xs text-amber-600 font-bold flex items-center gap-1"><Clock size={14}/>待檢核</span>}
+                {s.status === 'none' && (
+                  <button onClick={() => handleCheckIn(s.id)} className="w-full text-xs bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded font-medium transition-colors">
+                    立即打卡
+                  </button>
+                )}
+                {s.status === 'rejected' && (
+                  <button onClick={() => handleCheckIn(s.id)} className="w-full text-xs bg-red-500 hover:bg-red-600 text-white py-1.5 rounded font-medium transition-colors">
+                    重新打卡
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
+      <Modal {...modalConfig} onClose={closeModal} />
+      
+      {/* 頂部導覽列 */}
+      <header className="bg-white shadow-sm sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between py-4">
+            <h1 className="text-2xl font-black text-blue-700 flex items-center gap-2 mb-4 md:mb-0">
+              <ClipboardList className="text-blue-600" />
+              班級打掃管理系統 (37人)
+            </h1>
+            <nav className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
+              {[
+                { id: 'student', label: '學生打卡區', icon: <Users size={18}/> },
+                { id: 'officer', label: '幹部管理區', icon: <CheckCircle size={18}/> },
+                { id: 'violation', label: '違規警告', icon: <AlertTriangle size={18}/> },
+                { id: 'lottery', label: '全勤抽獎', icon: <Trophy size={18}/> },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-sm font-semibold transition-all ${
+                    activeTab === tab.id 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* 主要內容區 */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        
+        {/* 1. 學生打卡區 */}
+        {activeTab === 'student' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+              <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <CheckCircle className="text-blue-600"/> 每日打卡總覽
+              </h2>
+              <p className="text-slate-500 text-sm mb-6">點擊您所屬職務的「立即打卡」按鈕。請最晚於隔日中午 12:00 前完成打卡手續。</p>
+              
+              {renderStudentGrid('幹部')}
+              {renderStudentGrid('教室內掃')}
+              {renderStudentGrid('外掃區')}
+            </div>
+          </div>
+        )}
+
+        {/* 2. 衛生股長檢核區 */}
+        {activeTab === 'officer' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-amber-800 font-bold flex items-center gap-2">
+                  <Clock size={20} /> 檢核時間與照片上傳
+                </h2>
+                <p className="text-amber-700 text-sm mt-1">
+                  請衛生股長於 <strong>周一至周五 08:00-16:00</strong> 之間完成打卡審核與照片上傳。
+                </p>
+              </div>
+              <a 
+                href="https://drive.google.com/drive/u/0/folders/1sZQ3WDFP7StEUhPlyOTZ7Sxopw2tPNCh" 
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm whitespace-nowrap"
+              >
+                <Camera size={18} /> 前往 Google Drive 
+              </a>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <ClipboardList className="text-blue-600" size={20}/>
+                  待檢核清單
+                </h3>
+                <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-bold">
+                  {students.filter(s => s.status === 'pending').length} 筆待處理
+                </span>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {students.filter(s => s.status === 'pending').length === 0 ? (
+                  <div className="p-12 text-center text-slate-500">目前無待檢核的打卡紀錄</div>
+                ) : (
+                  students.filter(s => s.status === 'pending').map(item => (
+                    <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-inner bg-amber-100 text-amber-700">
+                          <User size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-lg">{item.name}</p>
+                          <p className="text-sm text-slate-500 flex items-center gap-2 mt-1">
+                            <span className="bg-slate-200 px-2 py-0.5 rounded text-xs font-semibold text-slate-700">{item.category}</span>
+                            <span className="bg-blue-100 px-2 py-0.5 rounded text-xs text-blue-700">{item.role}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button 
+                          onClick={() => handleReview(item.id, 'approved')}
+                          className="flex-1 sm:flex-none flex justify-center items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+                        >
+                          <CheckCircle size={18} /> 通過
+                        </button>
+                        <button 
+                          onClick={() => handleReview(item.id, 'rejected')}
+                          className="flex-1 sm:flex-none flex justify-center items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+                        >
+                          <XCircle size={18} /> 退回
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. 違規與未完成通知區 */}
+        {activeTab === 'violation' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <AlertTriangle className="text-red-500" size={20}/>
+                  自動篩選違規名單 (未完成達3次)
+                </h3>
+              </div>
+              
+              <div className="p-5 grid gap-6">
+                {INITIAL_VIOLATIONS.map(student => {
+                  const isCritical = student.count >= 3;
+                  return (
+                    <div 
+                      key={student.id} 
+                      className={`rounded-xl border-2 transition-all p-5 ${
+                        isCritical 
+                        ? 'border-red-200 bg-red-50/30' 
+                        : 'border-slate-100 bg-white'
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="text-xl font-black">{student.name}</h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              isCritical ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              未完成 {student.count} 次
+                            </span>
+                          </div>
+                          
+                          <div className="mt-4 space-y-2">
+                            <p className="text-sm font-bold text-slate-600 mb-1">未打掃詳細紀錄：</p>
+                            {student.details.map((detail, idx) => (
+                              <div key={idx} className="flex items-center gap-3 text-sm text-slate-700 bg-white border border-slate-100 p-2 rounded-lg">
+                                <Calendar size={16} className="text-slate-400"/> {detail.date} 
+                                <Clock size={16} className="text-slate-400 ml-2"/> {detail.time}
+                                <span className="ml-2 font-medium bg-slate-100 px-2 py-0.5 rounded">區域：{detail.area}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {isCritical && (
+                          <div className="mt-4 md:mt-0">
+                            <button 
+                              onClick={() => openModal('通知單已產生', `系統已自動產生【${student.name}】的未完成打掃通知單，並發送至班導與家長信箱。`)}
+                              className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Bell size={18} />
+                              產生家長/班導通知單
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4. 每月全勤抽獎區 */}
+        {activeTab === 'lottery' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-gradient-to-br from-indigo-900 to-blue-800 rounded-3xl shadow-2xl overflow-hidden p-1">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 md:p-12 text-center text-white border border-white/20">
+                <div className="inline-flex items-center justify-center p-4 bg-yellow-400 text-yellow-900 rounded-full mb-6 shadow-[0_0_30px_rgba(250,204,21,0.4)]">
+                  <Trophy size={48} />
+                </div>
+                <h2 className="text-3xl md:text-4xl font-black mb-4">每月初全勤抽獎</h2>
+                <p className="text-blue-100 mb-8 max-w-xl mx-auto leading-relaxed">
+                  系統將從「當月檢核皆通過」的同學中，隨機抽出 3 位幸運兒獲得特殊獎勵！感謝同學們維護班級整潔。
+                </p>
+
+                {winners.length === 0 ? (
+                  <button 
+                    onClick={handleDrawLottery}
+                    disabled={isDrawing}
+                    className={`text-xl font-bold py-4 px-10 rounded-full shadow-xl transition-all transform ${
+                      isDrawing 
+                      ? 'bg-blue-400 text-white cursor-not-allowed scale-95' 
+                      : 'bg-yellow-400 hover:bg-yellow-300 text-yellow-900 hover:scale-105 active:scale-95'
+                    }`}
+                  >
+                    {isDrawing ? '幸運轉盤轉動中...' : '隨機抽出 3 位得獎者 🎉'}
+                  </button>
+                ) : (
+                  <div className="space-y-8 animate-in zoom-in duration-500">
+                    <h3 className="text-2xl font-bold text-yellow-300 flex items-center justify-center gap-2">
+                      <Gift /> 恭喜本月中獎者！ <Gift />
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {winners.map((winner, idx) => (
+                        <div key={idx} className="bg-white text-slate-800 rounded-2xl p-6 shadow-xl transform transition-transform hover:-translate-y-2">
+                          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-black">
+                            {idx + 1}
+                          </div>
+                          <h4 className="text-xl font-black mb-4">{winner.name}</h4>
+                          <div className="text-left">
+                            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">選擇獲得獎勵</label>
+                            <select 
+                              value={winner.reward}
+                              onChange={(e) => handleRewardSelect(idx, e.target.value)}
+                              className="w-full p-3 rounded-lg border-2 border-slate-200 bg-slate-50 font-medium focus:border-blue-500 outline-none"
+                            >
+                              <option value="" disabled>-- 請選擇一項獎勵 --</option>
+                              <option value="全班鼓掌">👏 全班熱烈鼓掌</option>
+                              <option value="選座位">🪑 優先選座位權</option>
+                              <option value="獎勵金50元">💰 獎勵金 50 元</option>
+                            </select>
+                          </div>
+                          {winner.reward && (
+                            <div className="mt-4 p-2 bg-green-50 text-green-700 text-sm font-bold rounded animate-in fade-in">
+                              已選擇：{winner.reward}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-6">
+                      <button 
+                        onClick={() => setWinners([])}
+                        className="text-white/70 hover:text-white underline text-sm transition-colors"
+                      >
+                        重新抽獎
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
